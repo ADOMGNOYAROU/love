@@ -1,0 +1,20 @@
+{
+  "name": "valentine-proposal",
+  "version": "1.0.0",
+  "description": "Application interactive de demande de Saint-Valentine",
+  "main": "src/js/main.js",
+  "scripts": {
+    "dev": "live-server --port=3000 --host=localhost",
+    "build": "echo 'Build completed - Ready for deployment'",
+    "deploy": "echo 'Deploy to Vercel/Netlify'"
+  },
+  "keywords": ["valentine", "proposal", "interactive", "supabase"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0"
+  }
+}

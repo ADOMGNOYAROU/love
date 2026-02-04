@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Demande de Saint-Valentine interactive et personnalisée">
+    <title>Veux-tu être ma Valentine ? 💕</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Configuration Tailwind personnalisée -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'pulse-fast': 'pulse 1s infinite',
+                        'bounce-slow': 'bounce 2s infinite',
+                        'wiggle': 'wiggle 1s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        wiggle: {
+                            '0%, 100%': { transform: 'rotate(-3deg)' },
+                            '50%': { transform: 'rotate(3deg)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Styles personnalisés -->
+    <link rel="stylesheet" href="src/css/custom.css">
+    
+    <!-- Préchargement -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" as="script">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-pink-300 via-rose-300 to-pink-400 flex flex-col justify-center items-center text-white font-sans p-4 cursor-auto overflow-x-hidden">
+    
+    <!-- Écran de chargement -->
+    <div id="loadingScreen" class="fixed inset-0 bg-pink-400 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mx-auto mb-4"></div>
+            <p class="text-xl font-semibold">Préparation de la magie... ✨</p>
+        </div>
+    </div>
+
+    <!-- Popup identification demandeur -->
+    <section id="askerPopup" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-40 hidden">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-11/12 mx-4 text-center shadow-2xl animate__animated animate__fadeInUp">
+            <div class="mb-6">
+                <div class="text-6xl mb-4">💕</div>
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Créer ta demande</h2>
+                <p class="text-gray-600">Fais une demande inoubliable à ta Valentine</p>
+            </div>
+            
+            <form id="askerForm" class="space-y-4">
+                <div>
+                    <input 
+                        type="text" 
+                        id="askerName" 
+                        placeholder="Ton prénom..." 
+                        required
+                        maxlength="50"
+                        class="w-full px-4 py-3 text-gray-800 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none text-center font-semibold transition-all duration-200 bg-white shadow-inner"
+                    >
+                    <span class="text-xs text-red-500 hidden" id="askerNameError"></span>
+                </div>
+                
+                <div>
+                    <input 
+                        type="text" 
+                        id="responderNameForLink" 
+                        placeholder="Prénom de ta Valentine..." 
+                        required
+                        maxlength="50"
+                        class="w-full px-4 py-3 text-gray-800 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none text-center font-semibold transition-all duration-200 bg-white shadow-inner"
+                    >
+                    <span class="text-xs text-red-500 hidden" id="responderNameError"></span>
+                </div>
+                
+                <div>
+                    <input 
+                        type="email" 
+                        id="askerEmail" 
+                        placeholder="Ton email (optionnel)..." 
+                        maxlength="100"
+                        class="w-full px-4 py-3 text-gray-800 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none text-center font-semibold transition-all duration-200 bg-white shadow-inner"
+                    >
+                    <span class="text-xs text-red-500 hidden" id="askerEmailError"></span>
+                </div>
+                
+                <button 
+                    type="submit"
+                    class="w-full px-6 py-4 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-2xl font-bold text-lg hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-pink-500/50"
+                >
+                    ✨ Créer la demande magique
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Popup identification répondeur -->
+    <section id="responderPopup" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-40 hidden">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-11/12 mx-4 text-center shadow-2xl animate__animated animate__fadeInUp">
+            <div class="mb-6">
+                <div class="text-6xl mb-4 animate-bounce-slow">💌</div>
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Tu as reçu une demande !</h2>
+                <p class="text-gray-600 mb-4">De la part de : <span id="fromName" class="font-bold text-pink-500"></span></p>
+            </div>
+            
+            <form id="responderForm" class="space-y-4">
+                <div>
+                    <input 
+                        type="text" 
+                        id="responderName" 
+                        placeholder="Confirme ton prénom..." 
+                        required
+                        maxlength="50"
+                        class="w-full px-4 py-3 text-gray-800 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none text-center font-semibold transition-all duration-200 bg-white shadow-inner"
+                    >
+                    <span class="text-xs text-red-500 hidden" id="responderNameError"></span>
+                </div>
+                
+                <button 
+                    type="submit"
+                    class="w-full px-6 py-4 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-2xl font-bold text-lg hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-pink-500/50"
+                >
+                    💖 Voir la demande
+                </button>
+            </form>
+        </div>
+    </section>
+    
+    <!-- Contenu principal -->
+    <main id="mainContent" class="hidden w-full max-w-4xl mx-auto">
+        <!-- Message principal -->
+        <header class="text-center mb-8 md:mb-12">
+            <h1 id="dynamicTitle" class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-black font-bold drop-shadow-2xl animate-pulse-fast px-4 leading-tight">
+                <span id="responderDisplay"></span>, veux-tu être la Valentine de <span id="askerDisplay"></span> ? 💖
+            </h1>
+        </header>
+        
+        <!-- Boutons interactifs -->
+        <div class="relative">
+            <button 
+                id="oui" 
+                class="fixed px-6 md:px-8 py-4 md:py-6 text-lg md:text-xl font-bold bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-full shadow-2xl hover:scale-125 transition-all duration-300 z-20 min-w-[120px] md:min-w-[140px] hover:shadow-pink-500/50"
+                aria-label="Dire oui"
+            >
+                Oui 😍
+            </button>
+            
+            <button 
+                id="non" 
+                class="fixed px-6 md:px-8 py-4 md:py-6 text-lg md:text-xl font-bold bg-gray-200 text-gray-800 rounded-full shadow-xl hover:scale-90 transition-all duration-200 z-10 min-w-[120px] md:min-w-[140px]"
+                aria-label="Dire non"
+            >
+                Non 🙄
+            </button>
+        </div>
+    </main>
+
+    <!-- Écran de partage -->
+    <section id="shareLink" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col justify-center items-center z-40 hidden px-4">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-lg w-11/12 mx-4 text-center shadow-2xl">
+            <div class="mb-6">
+                <div class="text-6xl mb-4">📬</div>
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Partage ta demande !</h2>
+                <p class="text-gray-600">Envoie ce lien magique à ta Valentine :</p>
+            </div>
+            
+            <div class="bg-gray-100 rounded-xl p-4 mb-6 break-all">
+                <code id="generatedLink" class="text-sm text-pink-600 font-mono"></code>
+            </div>
+            
+            <div class="space-y-3">
+                <button 
+                    onclick="shareLink()"
+                    class="w-full px-6 py-3 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-2xl font-bold hover:scale-105 transition-all duration-200"
+                >
+                    📋 Copier le lien
+                </button>
+                
+                <button 
+                    onclick="viewResults()"
+                    class="w-full px-6 py-3 bg-purple-500 text-white rounded-2xl font-bold hover:scale-105 transition-all duration-200"
+                >
+                    📊 Voir mes résultats
+                </button>
+                
+                <button 
+                    onclick="resetToCreate()"
+                    class="w-full px-6 py-3 bg-gray-200 text-gray-800 rounded-2xl font-bold hover:scale-105 transition-all duration-200"
+                >
+                    ➕ Créer une autre demande
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Écran des résultats -->
+    <section id="resultsView" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col justify-center items-center z-40 hidden px-4">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-2xl w-11/12 mx-4 text-center shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div class="mb-6">
+                <div class="text-6xl mb-4">📊</div>
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Tes résultats d'amour 💕</h2>
+            </div>
+            
+            <div id="resultsContent" class="text-gray-700 mb-6 text-left"></div>
+            
+            <button 
+                onclick="closeResults()"
+                class="px-6 py-3 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-2xl font-bold hover:scale-105 transition-all duration-200"
+            >
+                Fermer
+            </button>
+        </div>
+    </section>
+
+    <!-- Écran de succès -->
+    <section id="success" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col justify-center items-center z-40 hidden px-4">
+        <div class="text-center">
+            <img 
+                src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExc3Y2aWoxeHFnOGF5cGFlYW92cDJhY2IydGd4d3U2M2Z5Z2l2eDByeCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/u8u0R51ND9L2/giphy.gif" 
+                alt="Célébration !" 
+                class="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 mx-auto mb-6 md:mb-8 animate-bounce"
+                loading="lazy"
+            >
+            <h2 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent drop-shadow-2xl animate-pulse text-center mb-4">
+                Woooww Superrr ! ❤️‍🩹
+            </h2>
+            <p class="text-white text-xl md:text-2xl mb-2">
+                De la part de <span id="finalFromName" class="font-bold"></span> à <span id="finalToName" class="font-bold"></span>
+            </p>
+            <p class="text-white text-lg opacity-90">Ta réponse a été enregistrée ! ✨</p>
+        </div>
+    </section>
+
+    <!-- Notification flottante -->
+    <div id="notification" class="fixed top-4 right-4 hidden z-50"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="src/js/utils.js"></script>
+    <script src="src/js/database.js"></script>
+    <script src="src/js/main.js"></script>
+</body>
+</html>
