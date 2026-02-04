@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veux-tu être ma Valentine ? 💕</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { animation: { 'pulse-fast': 'pulse 1s infinite' } } }
+        }
+    </script>
+    <style>
+        .btn-primary {
+            background: linear-gradient(135deg, #ff69b4, #ff1493);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 105, 180, 0.4);
+        }
+        .popup {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-pink-300 via-rose-300 to-pink-400 flex flex-col justify-center items-center text-white font-sans p-4">
+    
+    <!-- Écran de chargement -->
+    <div id="loadingScreen" class="fixed inset-0 bg-pink-400 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mx-auto mb-4"></div>
+            <p class="text-xl font-semibold">Préparation de la magie... ✨</p>
+        </div>
+    </div>
+
+    <!-- Popup demandeur -->
+    <div id="askerPopup" class="fixed inset-0 bg-black/70 flex items-center justify-center z-40 hidden">
+        <div class="popup rounded-3xl p-6 md:p-8 max-w-sm w-11/12 mx-4 text-center shadow-2xl">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Créer ta demande 💕</h2>
+            <input type="text" id="askerName" placeholder="Ton prénom..." 
+                   class="w-full px-4 py-3 text-gray-800 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none text-center font-semibold mb-3 bg-white">
+            <input type="text" id="responderNameForLink" placeholder="Prénom de ta Valentine..." 
+                   class="w-full px-4 py-3 text-gray-800 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none text-center font-semibold mb-3 bg-white">
+            <input type="email" id="askerEmail" placeholder="Ton email (optionnel)..." 
+                   class="w-full px-4 py-3 text-gray-800 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none text-center font-semibold mb-4 bg-white">
+            <button onclick="createProposal()" class="w-full px-6 py-3 btn-primary text-white rounded-2xl font-bold hover:scale-105 transition-all">
+                ✨ Créer la demande
+            </button>
+        </div>
+    </div>
+
+    <!-- Popup répondeur -->
+    <div id="responderPopup" class="fixed inset-0 bg-black/70 flex items-center justify-center z-40 hidden">
+        <div class="popup rounded-3xl p-6 md:p-8 max-w-sm w-11/12 mx-4 text-center shadow-2xl">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Tu as reçu une demande ! 💌</h2>
+            <p class="text-gray-600 mb-4">De la part de : <span id="fromName" class="font-bold text-pink-500"></span></p>
+            <input type="text" id="responderName" placeholder="Ton prénom..." 
+                   class="w-full px-4 py-3 text-gray-800 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none text-center font-semibold mb-4 bg-white">
+            <button onclick="startValentine()" class="w-full px-6 py-3 btn-primary text-white rounded-2xl font-bold hover:scale-105 transition-all">
+                💖 Voir la demande
+            </button>
+        </div>
+    </div>
+    
+    <!-- Contenu principal -->
+    <main id="mainContent" class="hidden w-full max-w-4xl mx-auto">
+        <h1 id="dynamicTitle" class="text-4xl md:text-6xl text-black font-bold mb-8 text-center px-4">
+            <span id="responderDisplay"></span>, veux-tu être la Valentine de <span id="askerDisplay"></span> ? 💖
+        </h1>
+        
+        <div class="relative">
+            <button id="oui" class="fixed px-6 py-4 text-lg font-bold btn-primary text-white rounded-full shadow-2xl hover:scale-125 transition-all z-20 min-w-[120px] hidden">
+                Oui 😍
+            </button>
+            
+            <button id="non" class="fixed px-6 py-4 text-lg font-bold bg-gray-200 text-gray-800 rounded-full shadow-xl hover:scale-90 transition-all z-10 min-w-[120px] hidden">
+                Non 🙄
+            </button>
+        </div>
+    </main>
+
+    <!-- Écran de partage -->
+    <div id="shareLink" class="fixed inset-0 bg-black/80 flex flex-col justify-center items-center z-40 hidden px-4">
+        <div class="popup rounded-3xl p-6 md:p-8 max-w-md w-11/12 mx-4 text-center shadow-2xl">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Partage ta demande ! 💌</h2>
+            <div class="bg-gray-100 rounded-xl p-4 mb-6 break-all">
+                <code id="generatedLink" class="text-sm text-pink-600 font-mono"></code>
+            </div>
+            <button onclick="copyLink()" class="w-full px-6 py-3 btn-primary text-white rounded-2xl font-bold hover:scale-105 transition-all mb-3">
+                📋 Copier le lien
+            </button>
+            <button onclick="viewResults()" class="w-full px-6 py-3 bg-purple-500 text-white rounded-2xl font-bold hover:scale-105 transition-all mb-3">
+                📊 Voir mes résultats
+            </button>
+            <button onclick="resetToCreate()" class="w-full px-6 py-3 bg-gray-200 text-gray-800 rounded-2xl font-bold hover:scale-105 transition-all">
+                ➕ Créer une autre demande
+            </button>
+        </div>
+    </div>
+
+    <!-- Résultats -->
+    <div id="resultsView" class="fixed inset-0 bg-black/80 flex flex-col justify-center items-center z-40 hidden px-4">
+        <div class="popup rounded-3xl p-6 md:p-8 max-w-md w-11/12 mx-4 text-center shadow-2xl max-h-[80vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Tes résultats d'amour 💕</h2>
+            <div id="resultsContent" class="text-gray-700 mb-6"></div>
+            <button onclick="closeResults()" class="px-6 py-3 btn-primary text-white rounded-2xl font-bold hover:scale-105 transition-all">
+                Fermer
+            </button>
+        </div>
+    </div>
+
+    <!-- Succès -->
+    <div id="success" class="fixed inset-0 bg-black/80 flex flex-col justify-center items-center z-40 hidden px-4">
+        <div class="text-center">
+            <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExc3Y2aWoxeHFnOGF5cGFlYW92cDJhY2IydGd4d3U2M2Z5Z2l2eDByeCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/u8u0R51ND9L2/giphy.gif" 
+                 alt="Succès !" class="w-48 h-48 mx-auto mb-6 animate-bounce">
+            <h2 class="text-4xl font-black bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent drop-shadow-2xl animate-pulse text-center mb-4">
+                Woooww Superrr ! ❤️‍🩹
+            </h2>
+            <p class="text-white text-xl mb-2">
+                De la part de <span id="finalFromName" class="font-bold"></span> à <span id="finalToName" class="font-bold"></span>
+            </p>
+            <p class="text-white text-lg opacity-90">Ta réponse a été enregistrée ! ✨</p>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let currentProposal = null;
+
+        // Initialisation
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const proposalId = urlParams.get('id');
+            const askerName = urlParams.get('from');
+            const responderName = urlParams.get('to');
+            
+            if (proposalId && askerName && responderName) {
+                // Mode répondeur direct
+                currentProposal = { id: proposalId, askerName, responderName };
+                document.getElementById('askerPopup').style.display = 'none';
+                
+                document.getElementById('responderDisplay').textContent = responderName;
+                document.getElementById('askerDisplay').textContent = askerName;
+                document.getElementById('dynamicTitle').classList.remove('hidden');
+                document.getElementById('oui').classList.remove('hidden');
+                document.getElementById('non').classList.remove('hidden');
+                
+                // Positionner les boutons
+                const isMobile = window.innerWidth < 768;
+                const ouiWidth = isMobile ? 120 : 140;
+                const spacing = isMobile ? 10 : 20;
+                
+                document.getElementById('oui').style.left = `calc(50% - ${ouiWidth + spacing}px)`;
+                document.getElementById('oui').style.top = 'calc(50% + 30px)';
+                document.getElementById('non').style.left = `calc(50% + ${spacing}px)`;
+                document.getElementById('non').style.top = 'calc(50% + 30px)';
+            } else if (proposalId && askerName) {
+                // Mode répondeur ancienne version
+                currentProposal = { id: proposalId, askerName };
+                document.getElementById('fromName').textContent = askerName;
+                document.getElementById('askerPopup').style.display = 'none';
+                document.getElementById('responderPopup').classList.remove('hidden');
+            } else {
+                // Mode demandeur
+                document.getElementById('askerPopup').classList.remove('hidden');
+            }
+            
+            // Masquer l'écran de chargement
+            setTimeout(() => {
+                document.getElementById('loadingScreen').style.display = 'none';
+            }, 1000);
+        });
+
+        function createProposal() {
+            const askerName = document.getElementById('askerName').value.trim();
+            const responderName = document.getElementById('responderNameForLink').value.trim();
+            const askerEmail = document.getElementById('askerEmail').value.trim();
+            
+            if (!askerName || !responderName) {
+                alert('Veuillez remplir tous les champs requis');
+                return;
+            }
+            
+            const proposalId = 'valentine_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const shareUrl = `${window.location.origin}${window.location.pathname}?id=${proposalId}&from=${encodeURIComponent(askerName)}&to=${encodeURIComponent(responderName)}`;
+            
+            // Sauvegarder en localStorage
+            localStorage.setItem(proposalId, JSON.stringify({
+                askerName,
+                responderName,
+                askerEmail,
+                createdAt: new Date().toISOString()
+            }));
+            
+            localStorage.setItem('current_asker', askerName);
+            
+            document.getElementById('generatedLink').textContent = shareUrl;
+            document.getElementById('askerPopup').style.display = 'none';
+            document.getElementById('shareLink').classList.remove('hidden');
+        }
+
+        function startValentine() {
+            const responderName = document.getElementById('responderName').value.trim();
+            if (!responderName) {
+                alert('Entre ton prénom stp 💕');
+                return;
+            }
+            
+            document.getElementById('responderPopup').style.display = 'none';
+            document.getElementById('responderDisplay').textContent = responderName;
+            document.getElementById('dynamicTitle').classList.remove('hidden');
+            document.getElementById('oui').classList.remove('hidden');
+            document.getElementById('non').classList.remove('hidden');
+            
+            // Positionner les boutons
+            const isMobile = window.innerWidth < 768;
+            const ouiWidth = isMobile ? 120 : 140;
+            const spacing = isMobile ? 10 : 20;
+            
+            document.getElementById('oui').style.left = `calc(50% - ${ouiWidth + spacing}px)`;
+            document.getElementById('oui').style.top = 'calc(50% + 30px)';
+            document.getElementById('non').style.left = `calc(50% + ${spacing}px)`;
+            document.getElementById('non').style.top = 'calc(50% + 30px)';
+        }
+
+        function copyLink() {
+            navigator.clipboard.writeText(document.getElementById('generatedLink').textContent).then(() => {
+                alert('Lien copié ! 📋');
+            });
+        }
+
+        function resetToCreate() {
+            document.getElementById('shareLink').classList.add('hidden');
+            document.getElementById('askerPopup').style.display = 'flex';
+            document.getElementById('askerName').value = '';
+            document.getElementById('responderNameForLink').value = '';
+            document.getElementById('askerEmail').value = '';
+        }
+
+        function moveNonButton() {
+            const maxX = window.innerWidth - 180;
+            const maxY = window.innerHeight - 180;
+            const newX = Math.random() * maxX;
+            const newY = Math.random() * maxY;
+            document.getElementById('non').style.left = newX + 'px';
+            document.getElementById('non').style.top = newY + 'px';
+        }
+
+        function growOuiButton() {
+            const currentScale = parseFloat(document.getElementById('oui').getAttribute('data-scale') || 1);
+            if (currentScale < 2) {
+                const newScale = Math.min(currentScale + 0.2, 2);
+                document.getElementById('oui').setAttribute('data-scale', newScale);
+                document.getElementById('oui').style.transform = `scale(${newScale})`;
+            }
+        }
+
+        // Bouton Non fuit au survol
+        document.getElementById('non').addEventListener('mouseenter', moveNonButton);
+
+        // Bouton Non fuit au clic
+        document.getElementById('non').addEventListener('click', (e) => {
+            e.preventDefault();
+            moveNonButton();
+            growOuiButton();
+        });
+
+        // Bouton Oui grandit au survol
+        document.getElementById('oui').addEventListener('mouseenter', growOuiButton);
+
+        // Succès au clic sur Oui
+        document.getElementById('oui').addEventListener('click', () => {
+            document.querySelectorAll('button').forEach(b => b.style.display = 'none');
+            document.getElementById('dynamicTitle').style.display = 'none';
+            
+            const responderName = currentProposal?.responderName || document.getElementById('responderName')?.value.trim() || 'Quelqu\'un';
+            document.getElementById('finalFromName').textContent = currentProposal?.askerName || 'Quelqu\'un';
+            document.getElementById('finalToName').textContent = responderName;
+            
+            // Enregistrer la réponse
+            if (currentProposal?.id) {
+                const response = {
+                    proposalId: currentProposal.id,
+                    askerName: currentProposal.askerName,
+                    responderName: responderName,
+                    response: 'OUI',
+                    respondedAt: new Date().toISOString()
+                };
+                
+                const responses = JSON.parse(localStorage.getItem('valentine_responses') || '[]');
+                responses.push(response);
+                localStorage.setItem('valentine_responses', JSON.stringify(responses));
+            }
+            
+            document.getElementById('success').classList.remove('hidden');
+        });
+
+        // Touches Enter
+        document.getElementById('askerName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createProposal();
+        });
+        
+        document.getElementById('responderNameForLink').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createProposal();
+        });
+        
+        document.getElementById('askerEmail').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createProposal();
+        });
+        
+        document.getElementById('responderName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') startValentine();
+        });
+
+        function viewResults() {
+            const askerName = localStorage.getItem('current_asker');
+            const responses = JSON.parse(localStorage.getItem('valentine_responses') || '[]');
+            const myResponses = responses.filter(r => r.askerName === askerName);
+            
+            if (myResponses.length === 0) {
+                document.getElementById('resultsContent').innerHTML = `
+                    <p class="text-gray-600">Aucune réponse enregistrée pour le moment.</p>
+                    <p class="text-sm text-gray-500 mt-2">Les réponses apparaîtront ici dès que tes Valentines répondront !</p>
+                `;
+            } else {
+                let html = '<div class="space-y-4">';
+                myResponses.forEach(response => {
+                    const date = new Date(response.respondedAt);
+                    const dateStr = date.toLocaleDateString('fr-FR') + ' à ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                    
+                    if (response.response === 'OUI') {
+                        html += `
+                            <div class="bg-green-100 border border-green-300 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-green-800 font-bold">✅ OUI !</span>
+                                    <span class="text-xs text-gray-500">${dateStr}</span>
+                                </div>
+                                <p class="text-green-700"><strong>${response.responderName}</strong> a accepté ta demande !</p>
+                                <p class="text-sm text-green-600 mt-1">De : ${response.askerName} → ${response.responderName}</p>
+                            </div>
+                        `;
+                    }
+                });
+                html += '</div>';
+                
+                document.getElementById('resultsContent').innerHTML = html;
+            }
+            
+            document.getElementById('shareLink').classList.add('hidden');
+            document.getElementById('resultsView').classList.remove('hidden');
+        }
+        
+        function closeResults() {
+            document.getElementById('resultsView').classList.add('hidden');
+            document.getElementById('shareLink').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

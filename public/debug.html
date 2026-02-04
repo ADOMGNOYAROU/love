@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Debug Love 💕</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { animation: { 'pulse-fast': 'pulse 1s infinite' } } }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-pink-300 flex flex-col justify-center items-center text-white font-sans p-4">
+    
+    <!-- Écran de chargement -->
+    <div id="loadingScreen" class="fixed inset-0 bg-pink-400 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mx-auto mb-4"></div>
+            <p class="text-xl font-semibold">Préparation de la magie... ✨</p>
+            <div class="mt-4 text-sm opacity-75" id="loadingStatus">Initialisation...</div>
+        </div>
+    </div>
+
+    <!-- Debug Panel -->
+    <div id="debugPanel" class="fixed top-4 left-4 bg-black/80 text-white p-4 rounded-lg z-50 text-xs max-w-sm hidden">
+        <h3 class="font-bold mb-2">🔍 Debug Info</h3>
+        <div id="debugInfo"></div>
+        <button onclick="hideDebug()" class="mt-2 bg-red-500 px-2 py-1 rounded text-xs">Fermer</button>
+    </div>
+
+    <!-- Popup identification demandeur -->
+    <div id="askerPopup" class="fixed inset-0 bg-black/70 flex items-center justify-center z-40 hidden">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-sm w-11/12 mx-4 text-center shadow-2xl">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Créer ta demande 💕</h2>
+            <input type="text" id="askerName" placeholder="Ton prénom..." 
+                   class="w-full px-4 py-3 text-gray-800 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none text-center font-semibold mb-3 bg-white shadow-inner">
+            <input type="text" id="responderNameForLink" placeholder="Prénom de ta Valentine..." 
+                   class="w-full px-4 py-3 text-gray-800 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none text-center font-semibold mb-3 bg-white shadow-inner">
+            <input type="email" id="askerEmail" placeholder="Ton email (optionnel)..." 
+                   class="w-full px-4 py-3 text-gray-800 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none text-center font-semibold mb-4 bg-white shadow-inner">
+            <button onclick="createProposal()" class="w-full px-6 py-3 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-2xl font-bold hover:scale-105 transition-all duration-200">
+                ✨ Créer la demande magique
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenu principal -->
+    <main id="mainContent" class="hidden w-full max-w-4xl mx-auto">
+        <h1 id="dynamicTitle" class="text-3xl sm:text-4xl md:text-5xl text-black font-bold mb-8 text-center px-4">
+            <span id="responderDisplay"></span>, veux-tu être la Valentine de <span id="askerDisplay"></span> ? 💖
+        </h1>
+        
+        <div class="relative">
+            <button id="oui" class="fixed px-6 py-4 text-lg font-bold bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-full shadow-2xl hover:scale-125 transition-all duration-300 z-20 min-w-[120px] hidden">
+                Oui 😍
+            </button>
+            
+            <button id="non" class="fixed px-6 py-4 text-lg font-bold bg-gray-200 text-gray-800 rounded-full shadow-xl hover:scale-90 transition-all duration-200 z-10 min-w-[120px] hidden">
+                Non 🙄
+            </button>
+        </div>
+    </main>
+
+    <!-- Écran de partage -->
+    <section id="shareLink" class="fixed inset-0 bg-black/80 flex flex-col justify-center items-center z-40 hidden px-4">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-6 md:p-8 max-w-md w-11/12 mx-4 text-center shadow-2xl">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Partage ta demande ! 💌</h2>
+            <div class="bg-gray-100 rounded-xl p-4 mb-6 break-all">
+                <code id="generatedLink" class="text-sm text-pink-600 font-mono"></code>
+            </div>
+            <button onclick="copyLink()" class="w-full px-6 py-3 bg-gradient-to-r from-pink-400 to-rose-400 text-white rounded-2xl font-bold hover:scale-105 transition-all duration-200 mb-3">
+                📋 Copier le lien
+            </button>
+            <button onclick="resetToCreate()" class="w-full px-6 py-3 bg-gray-200 text-gray-800 rounded-2xl font-bold hover:scale-105 transition-all duration-200">
+                ➕ Créer une autre demande
+            </button>
+        </div>
+    </section>
+
+    <!-- Succès -->
+    <section id="success" class="fixed inset-0 bg-black/80 flex flex-col justify-center items-center z-40 hidden px-4">
+        <div class="text-center">
+            <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExc3Y2aWoxeHFnOGF5cGFlYW92cDJhY2IydGd4d3U2M2Z5Z2l2eDByeCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/u8u0R51ND9L2/giphy.gif" 
+                 alt="Succès !" class="w-48 h-48 mx-auto mb-6 animate-bounce">
+            <h2 class="text-3xl font-black bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent drop-shadow-2xl animate-pulse text-center mb-4">
+                Woooww Superrr ! ❤️‍🩹
+            </h2>
+            <p class="text-white text-xl mb-2">
+                De la part de <span id="finalFromName" class="font-bold"></span> à <span id="finalToName" class="font-bold"></span>
+            </p>
+            <p class="text-white text-lg opacity-90">Ta réponse a été enregistrée ! ✨</p>
+        </div>
+    </section>
+
+    <script>
+        // Variables globales
+        let currentProposal = null;
+        let debugMode = true;
+
+        // Éléments DOM
+        const elements = {
+            loadingScreen: null,
+            loadingStatus: null,
+            askerPopup: null,
+            mainContent: null,
+            shareLink: null,
+            success: null,
+            askerName: null,
+            responderNameForLink: null,
+            askerEmail: null,
+            responderDisplay: null,
+            askerDisplay: null,
+            generatedLink: null,
+            finalFromName: null,
+            finalToName: null,
+            ouiBtn: null,
+            nonBtn: null
+        };
+
+        // Fonctions de debug
+        function updateLoadingStatus(message) {
+            if (elements.loadingStatus) {
+                elements.loadingStatus.textContent = message;
+            }
+            console.log(`📝 Loading: ${message}`);
+        }
+
+        function addDebugInfo(message) {
+            if (debugMode) {
+                console.log(`🔍 Debug: ${message}`);
+                const debugInfo = document.getElementById('debugInfo');
+                if (debugInfo) {
+                    debugInfo.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+                }
+            }
+        }
+
+        function showDebug() {
+            document.getElementById('debugPanel').classList.remove('hidden');
+        }
+
+        function hideDebug() {
+            document.getElementById('debugPanel').classList.add('hidden');
+        }
+
+        // Initialisation
+        function initializeApp() {
+            try {
+                updateLoadingStatus('Chargement des éléments...');
+                
+                // Récupérer les éléments DOM
+                elements.loadingScreen = document.getElementById('loadingScreen');
+                elements.loadingStatus = document.getElementById('loadingStatus');
+                elements.askerPopup = document.getElementById('askerPopup');
+                elements.mainContent = document.getElementById('mainContent');
+                elements.shareLink = document.getElementById('shareLink');
+                elements.success = document.getElementById('success');
+                elements.askerName = document.getElementById('askerName');
+                elements.responderNameForLink = document.getElementById('responderNameForLink');
+                elements.askerEmail = document.getElementById('askerEmail');
+                elements.responderDisplay = document.getElementById('responderDisplay');
+                elements.askerDisplay = document.getElementById('askerDisplay');
+                elements.generatedLink = document.getElementById('generatedLink');
+                elements.finalFromName = document.getElementById('finalFromName');
+                elements.finalToName = document.getElementById('finalToName');
+                elements.ouiBtn = document.getElementById('oui');
+                elements.nonBtn = document.getElementById('non');
+
+                addDebugInfo('Éléments DOM chargés');
+
+                updateLoadingStatus('Vérification des paramètres URL...');
+                
+                // Analyser l'URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const proposalId = urlParams.get('id');
+                const askerName = urlParams.get('from');
+                const responderName = urlParams.get('to');
+                
+                addDebugInfo(`URL params: id=${proposalId}, from=${askerName}, to=${responderName}`);
+
+                if (proposalId && askerName && responderName) {
+                    // Mode répondeur direct
+                    updateLoadingStatus('Mode répondeur détecté...');
+                    currentProposal = { id: proposalId, askerName, responderName };
+                    showDirectProposal();
+                } else {
+                    // Mode demandeur
+                    updateLoadingStatus('Mode demandeur...');
+                    showAskerMode();
+                }
+
+                updateLoadingStatus('Finalisation...');
+                setTimeout(() => {
+                    hideLoadingScreen();
+                    addDebugInfo('Application initialisée avec succès');
+                }, 1000);
+
+            } catch (error) {
+                console.error('❌ Erreur initialisation:', error);
+                addDebugInfo(`ERREUR: ${error.message}`);
+                updateLoadingStatus('Erreur de chargement...');
+                
+                // Afficher le mode debug en cas d'erreur
+                setTimeout(() => {
+                    showDebug();
+                    hideLoadingScreen();
+                }, 2000);
+            }
+        }
+
+        function showAskerMode() {
+            elements.askerPopup.classList.remove('hidden');
+            elements.askerName.focus();
+            addDebugInfo('Mode demandeur affiché');
+        }
+
+        function showDirectProposal() {
+            elements.askerPopup.classList.add('hidden');
+            elements.mainContent.classList.remove('hidden');
+            
+            elements.responderDisplay.textContent = currentProposal.responderName;
+            elements.askerDisplay.textContent = currentProposal.askerName;
+            
+            // Positionner les boutons
+            const isMobile = window.innerWidth < 768;
+            const ouiWidth = isMobile ? 120 : 140;
+            const spacing = isMobile ? 10 : 20;
+            
+            elements.ouiBtn.style.left = `calc(50% - ${ouiWidth + spacing}px)`;
+            elements.ouiBtn.style.top = 'calc(50% + 30px)';
+            elements.nonBtn.style.left = `calc(50% + ${spacing}px)`;
+            elements.nonBtn.style.top = 'calc(50% + 30px)';
+            
+            elements.ouiBtn.classList.remove('hidden');
+            elements.nonBtn.classList.remove('hidden');
+            
+            addDebugInfo('Mode répondeur direct affiché');
+        }
+
+        function hideLoadingScreen() {
+            if (elements.loadingScreen) {
+                elements.loadingScreen.style.opacity = '0';
+                elements.loadingScreen.style.transition = 'opacity 0.5s ease-out';
+                setTimeout(() => {
+                    elements.loadingScreen.style.display = 'none';
+                }, 500);
+            }
+        }
+
+        function createProposal() {
+            const askerName = elements.askerName.value.trim();
+            const responderName = elements.responderNameForLink.value.trim();
+            
+            if (!askerName || !responderName) {
+                alert('Veuillez remplir tous les champs');
+                return;
+            }
+            
+            // Générer un lien
+            const proposalId = 'valentine_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const baseUrl = window.location.origin + window.location.pathname;
+            const shareUrl = `${baseUrl}?id=${proposalId}&from=${encodeURIComponent(askerName)}&to=${encodeURIComponent(responderName)}`;
+            
+            // Sauvegarder en localStorage
+            localStorage.setItem(proposalId, JSON.stringify({
+                askerName,
+                responderName,
+                createdAt: new Date().toISOString()
+            }));
+            
+            elements.generatedLink.textContent = shareUrl;
+            elements.askerPopup.classList.add('hidden');
+            elements.shareLink.classList.remove('hidden');
+            
+            addDebugInfo(`Proposition créée: ${askerName} → ${responderName}`);
+        }
+
+        function copyLink() {
+            navigator.clipboard.writeText(elements.generatedLink.textContent).then(() => {
+                alert('Lien copié ! 📋');
+            });
+        }
+
+        function resetToCreate() {
+            elements.shareLink.classList.add('hidden');
+            elements.askerPopup.classList.remove('hidden');
+            elements.askerName.value = '';
+            elements.responderNameForLink.value = '';
+            elements.askerEmail.value = '';
+            elements.askerName.focus();
+        }
+
+        // Boutons interactifs
+        function moveNonButton() {
+            const maxX = window.innerWidth - 180;
+            const maxY = window.innerHeight - 180;
+            const newX = Math.random() * maxX;
+            const newY = Math.random() * maxY;
+            elements.nonBtn.style.left = newX + 'px';
+            elements.nonBtn.style.top = newY + 'px';
+        }
+
+        function growOuiButton() {
+            const currentScale = parseFloat(elements.ouiBtn.getAttribute('data-scale') || 1);
+            if (currentScale < 2) {
+                const newScale = Math.min(currentScale + 0.2, 2);
+                elements.ouiBtn.setAttribute('data-scale', newScale);
+                elements.ouiBtn.style.transform = `scale(${newScale})`;
+            }
+        }
+
+        // Écouteurs d'événements
+        elements.ouiBtn?.addEventListener('click', () => {
+            document.querySelectorAll('button').forEach(b => b.style.display = 'none');
+            elements.mainContent.style.display = 'none';
+            
+            const responderName = currentProposal?.responderName || 'Quelqu\'un';
+            elements.finalFromName.textContent = currentProposal?.askerName || 'Quelqu\'un';
+            elements.finalToName.textContent = responderName;
+            
+            elements.success.classList.remove('hidden');
+            addDebugInfo('Réponse OUI enregistrée');
+        });
+
+        elements.nonBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            moveNonButton();
+            growOuiButton();
+            addDebugInfo('Tentative NON - bouton fui');
+        });
+
+        elements.nonBtn?.addEventListener('mouseenter', moveNonButton);
+        elements.ouiBtn?.addEventListener('mouseenter', growOuiButton);
+
+        // Touches Enter
+        elements.askerName?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createProposal();
+        });
+        
+        elements.responderNameForLink?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createProposal();
+        });
+        
+        elements.askerEmail?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createProposal();
+        });
+
+        // Démarrage de l'application
+        document.addEventListener('DOMContentLoaded', () => {
+            addDebugInfo('DOM chargé');
+            initializeApp();
+        });
+
+        // Si le DOM est déjà chargé
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            initializeApp();
+        }
+
+        // Afficher le panneau de debug après 5 secondes si problème
+        setTimeout(() => {
+            if (elements.loadingScreen && elements.loadingScreen.style.display !== 'none') {
+                showDebug();
+                addDebugInfo('⚠️ Timeout - affichage du debug');
+            }
+        }, 5000);
+
+        // Raccourci clavier pour debug
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                showDebug();
+            }
+        });
+    </script>
+</body>
+</html>
